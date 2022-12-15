@@ -10,15 +10,19 @@ contract Bank {
     error InvalidInput();
     error InsufficientBalance();
     error LowLimit();
+    error InvalidAmount();
+    error UnpaidLoan();
+    error NoDebt();
     
     
     IERC20 public token;
     AggregatorV3Interface internal priceFeed;
 
     address private Owner;
-    
+    mapping (address=>uint) userRepay;
     mapping (address => uint) userDeposit;
     mapping (address => uint) userLimit;
+
     constructor(address _deployer, address _interfaceAgg) {
         if(_deployer == address(0) || _interfaceAgg==address(0)) revert ZeroAddress();
         Owner = _deployer;
@@ -30,7 +34,7 @@ contract Bank {
         if(_token == address(0)) revert ZeroAddress();
         token = IERC20(_token);
     }
-    function DepositToken(uint amount) external {
+    function DepositCollateral(uint amount) external {
         if(amount==0) revert InvalidInput();
         if(token.balanceOf(msg.sender)<amount) revert InsufficientBalance();
         token.transfer(address(this),amount);
@@ -49,9 +53,26 @@ contract Bank {
         
 
     }
-    function getLoan(uint amount) external {
+    function borrow(uint amount) external {
         calculateLoanLimit(msg.sender);
         if(userLimit[msg.sender]<amount) revert LowLimit();
-        
+        userLimit[msg.sender]-=amount;
+        payable(msg.sender).transfer(amount);
+        userRepay[msg.sender]=(52 * amount)/50;
     }
+    function repay() external payable{
+        if(userRepay[msg.sender]==0) revert NoDebt();
+        if(msg.value>userRepay[msg.sender]) revert InvalidAmount();
+        userRepay[msg.sender]-=msg.value;
+        userLimit[msg.sender]+=msg.value;
+    }
+    function withdrawCollateral(uint amount) external {
+        if(amount==0) revert InvalidInput();
+        if(userRepay[msg.sender]>0) revert UnpaidLoan();
+        userDeposit[msg.sender]-=amount;
+        token.transferFrom(address(this),msg.sender,amount);
+
+    }
+
+
 }
