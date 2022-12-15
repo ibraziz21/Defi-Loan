@@ -9,6 +9,7 @@ contract Bank {
     error Forbidden();
     error InvalidInput();
     error InsufficientBalance();
+    error LowLimit();
     
     
     IERC20 public token;
@@ -36,7 +37,7 @@ contract Bank {
         userDeposit[msg.sender]+=amount;
     }
 
-    function calculateLoanLimit(address _address) external returns(uint){
+    function calculateLoanLimit(address _address) internal {
         uint userUsd = userDeposit[_address];
         (uint80 roundId, int price,uint startedAt,uint timeStamp,uint80 answeredInRound) = priceFeed.latestRoundData();
         int userAmtInEth = int(userUsd)/price;
@@ -45,10 +46,11 @@ contract Bank {
         uint loanLimit = uint((7 * userAmtInEth)/(10));
         userLimit[_address]= loanLimit * 1 ether;
 
-
+        
 
     }
     function getLoan(uint amount) external {
+        calculateLoanLimit(msg.sender);
         if(userLimit[msg.sender]<amount) revert LowLimit();
         
     }
