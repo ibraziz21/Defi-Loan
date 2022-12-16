@@ -23,9 +23,9 @@ contract Bank {
     mapping (address => uint) userDeposit;
     mapping (address => uint) userLimit;
 
-    constructor(address _deployer, address _interfaceAgg) {
-        if(_deployer == address(0) || _interfaceAgg==address(0)) revert ZeroAddress();
-        Owner = _deployer;
+    constructor(address _interfaceAgg) {
+        if(_interfaceAgg==address(0)) revert ZeroAddress();
+        Owner = msg.sender;
         priceFeed = AggregatorV3Interface(_interfaceAgg);
     }
 
